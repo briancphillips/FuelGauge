@@ -14,8 +14,11 @@ static uint8_t conv2d(const char *p)
 }
 
 static int16_t w, h, center;
-static uint8_t c_mpg, a_mpg;
+
+static uint8_t c_mpg=30, a_mpg=44;
 static uint16_t fuel_max = TANKSIZE * 40;
+
+//TODO: read fuel level from CAN
 static uint16_t fuel_level_start = (fuel_max - (TANKSIZE - 1.65) * 40);
 
 static unsigned long currentTime;
@@ -126,7 +129,7 @@ void display_fuel_mpg()
     //gfx->drawRect(60, h / 2 - 30, 30, 60, YELLOW);
     //gfx->drawRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-    draw_center_txt(String(fuel_level_start), x0, h - 30);
+    draw_center_txt(String(fuel_level_start/a_mpg), x0, h - 30);
     draw_txt(String(c_mpg), 65, 160);
     draw_txt(String(a_mpg), 155, 160);
 
