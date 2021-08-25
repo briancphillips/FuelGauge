@@ -1,5 +1,14 @@
 #include <Arduino_GFX_Library.h>
 #include <SPI.h>
+#include <mcp_can.h>
+
+long unsigned int rxId;
+unsigned char len = 0;
+unsigned char rxBuf[8];
+char msgString[128]; // Array to store serial string
+
+#define CAN0_INT 2 // Set INT to pin 2
+MCP_CAN CAN0(10);
 
 Arduino_DataBus *bus = new Arduino_HWSPI(7 /* DC */, 3 /* CS */);
 Arduino_GFX *gfx = new Arduino_GC9A01(bus, 8 /* RST */, 0 /* rotation */, true /* IPS */);
@@ -15,7 +24,7 @@ static uint8_t conv2d(const char *p)
 
 static int16_t w, h, center;
 
-static uint8_t c_mpg=30, a_mpg=44;
+static uint8_t c_mpg = 30, a_mpg = 44;
 static uint16_t fuel_max = TANKSIZE * 40;
 
 //TODO: read fuel level from CAN
@@ -38,7 +47,19 @@ void setup(void)
     digitalWrite(TFT_BL, HIGH);
 #endif
 
-    Serial.begin(9600);
+    Serial.begin(115200);
+
+    // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
+    if (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+        Serial.println("MCP2515 Initialized Successfully!");
+    else
+        Serial.println("Error Initializing MCP2515...");
+
+    CAN0.setMode(MCP_NORMAL); // Set operation mode to normal so the MCP2515 sends acks to received data.
+
+    pinMode(CAN0_INT, INPUT); // Configuring pin for /INT input
+
+    Serial.println("MCP2515 Library Receive Example...");
 
     // init LCD constant
     w = gfx->width();
@@ -129,7 +150,7 @@ void display_fuel_mpg()
     //gfx->drawRect(60, h / 2 - 30, 30, 60, YELLOW);
     //gfx->drawRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-    draw_center_txt(String(map(fuel_level_start,40,320,0,fuel_max)), x0, h - 30);
+    draw_center_txt(String(map(fuel_level_start, 40, 320, 0, fuel_max)), x0, h - 30);
     draw_txt(String(c_mpg), 65, 160);
     draw_txt(String(a_mpg), 155, 160);
 
@@ -222,8 +243,37 @@ void loop()
     targetTime = millis();
     if (targetTime % 5000 == 0 && targetTime > 5000)
     {
-        Serial.println(((millis() / 1000) + 1) * 1000);
+        //Serial.println(((millis() / 1000) + 1) * 1000);
         calculate_fuel_mpg();
         display_fuel_mpg();
+    }
+
+    if (!digitalRead(CAN0_INT)) // If CAN0_INT pin is low, read receive buffer
+    {
+        CAN0.readMsgBuf(&rxId, &len, rxBuf); // Read data: len = data length, buf = data byte(s)
+
+        if ((rxId & 0x80000000) == 0x80000000) // Determine if ID is standard (11 bits) or extended (29 bits)
+            sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
+        else
+            sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
+
+        Serial.print(msgString);
+
+        if ((rxId & 0x40000000) == 0x40000000)
+        { // Determine if message is a remote request frame.
+            sprintf(msgString, " REMOTE REQUEST FRAME");
+            Serial.print(msgString);
+        }
+        else
+        {
+            for (byte i = 0; i < len; i++)
+            {
+                sprintf(msgString, " 0x%.2X", rxBuf[i]);
+                Serial.print(msgString);
+            }
+        }
+        Serial.println();
+        Serial.println(targetTime);
+        Serial.println();
     }
 }
