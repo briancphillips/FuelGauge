@@ -129,7 +129,7 @@ void display_fuel_mpg()
     //gfx->drawRect(60, h / 2 - 30, 30, 60, YELLOW);
     //gfx->drawRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-    draw_center_txt(String(fuel_level_start/a_mpg), x0, h - 30);
+    draw_center_txt(String(map(fuel_level_start,40,320,0,fuel_max)), x0, h - 30);
     draw_txt(String(c_mpg), 65, 160);
     draw_txt(String(a_mpg), 155, 160);
 
