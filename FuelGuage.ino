@@ -30,9 +30,9 @@ static uint16_t fuel_max = TANKSIZE * 40;
 //TODO: read fuel level from CAN
 static uint16_t fuel_level_start = (fuel_max - (TANKSIZE - 1.65) * 40);
 
-static unsigned long currentTime;
-static unsigned long deltaTime;
-static unsigned long targetTime; // next action time
+static unsigned long lastTime = 0;
+static unsigned long accumulated_time = 0;
+static unsigned long currentTime = 0; // next action time
 
 static uint16_t x0, y0;
 
@@ -50,7 +50,7 @@ void setup(void)
     Serial.begin(115200);
 
     // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
-    if (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+    if (CAN0.begin(MCP_ANY, CAN_250KBPS, MCP_16MHZ) == CAN_OK)
         Serial.println("MCP2515 Initialized Successfully!");
     else
         Serial.println("Error Initializing MCP2515...");
@@ -88,7 +88,7 @@ void setup(void)
     //gfx->print("100%");
     gfx->setRotation(1);
 
-    //targetTime = ((millis() / 1000) + 1) * 1000;
+    //currentTime = ((millis() / 1000) + 1) * 1000;
 
     delay(5);
     // gfx->setCursor(x0-15, y0+15);
@@ -149,8 +149,10 @@ void display_fuel_mpg()
 {
     //gfx->drawRect(60, h / 2 - 30, 30, 60, YELLOW);
     //gfx->drawRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
+
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
     draw_center_txt(String(map(fuel_level_start, 40, 320, 0, fuel_max)), x0, h - 30);
+
     draw_txt(String(c_mpg), 65, 160);
     draw_txt(String(a_mpg), 155, 160);
 
@@ -159,7 +161,7 @@ void display_fuel_mpg()
     if (fuel_level_start > 40)
     {
         gfx->fillArc(x0, y0, 118, 88, fuel_level_start, 320 + 10, BLACK);
-        fuel_level_start -= 1;
+        Serial.println("FUEL " + String(fuel_level_start));
     }
 
     gfx->setRotation(0);
@@ -224,6 +226,7 @@ void draw_center_txt(const String &buf, int x, int y)
     gfx->getTextBounds(buf, x, y, &x1, &y1, &w, &h); //calc width of new string
     gfx->setCursor(x - w / 2, y);
     gfx->print(buf);
+    //Serial.println("Buffer: "+buf);
     //Serial.println(x - w / 2);
 }
 
@@ -240,12 +243,15 @@ void draw_txt(const String &buf, int x, int y)
 
 void loop()
 {
-    targetTime = millis();
-    if (targetTime % 5000 == 0 && targetTime > 5000)
+    currentTime = millis();
+    //calculate_fuel_mpg();
+    display_fuel_mpg();
+    if (accumulated_time > 1000)
     {
+        accumulated_time = 0;
+        if (fuel_level_start > 40)
+            fuel_level_start -= 1;
         //Serial.println(((millis() / 1000) + 1) * 1000);
-        calculate_fuel_mpg();
-        display_fuel_mpg();
     }
 
     if (!digitalRead(CAN0_INT)) // If CAN0_INT pin is low, read receive buffer
@@ -257,23 +263,25 @@ void loop()
         else
             sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
 
-        Serial.print(msgString);
+        //Serial.print(msgString);
 
         if ((rxId & 0x40000000) == 0x40000000)
         { // Determine if message is a remote request frame.
             sprintf(msgString, " REMOTE REQUEST FRAME");
-            Serial.print(msgString);
+            //Serial.print(msgString);
         }
         else
         {
             for (byte i = 0; i < len; i++)
             {
                 sprintf(msgString, " 0x%.2X", rxBuf[i]);
-                Serial.print(msgString);
+                //Serial.print(msgString);
             }
         }
-        Serial.println();
-        Serial.println(targetTime);
-        Serial.println();
     }
+    accumulated_time += millis() - currentTime;
+
+    //Serial.println();
+    //Serial.println(accumulated_time);
+    //Serial.println();
 }
