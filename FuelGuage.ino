@@ -146,9 +146,8 @@ void calculate_fuel_mpg()
     a_mpg = 44;
 }
 void display_fuel_mpg()
-{
-    //gfx->drawRect(60, h / 2 - 30, 30, 60, YELLOW);
-    //gfx->drawRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
+{    
+    Serial.println("in the display fuel");
 
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
     draw_center_txt(String(map(fuel_level_start, 40, 320, 0, fuel_max)), x0, h - 30);
@@ -156,7 +155,7 @@ void display_fuel_mpg()
     draw_txt(String(c_mpg), 65, 160);
     draw_txt(String(a_mpg), 155, 160);
 
-    float percent = (fuel_level_start - 40) / (320 - 40) * 100;
+    // float percent = (fuel_level_start - 40) / (320 - 40) * 100;
     gfx->setRotation(1);
     if (fuel_level_start > 40)
     {
@@ -164,43 +163,7 @@ void display_fuel_mpg()
         Serial.println("FUEL " + String(fuel_level_start));
     }
 
-    gfx->setRotation(0);
-
-    /* for (float i = 310; i >= 40; i -= 5)
-    {
-        float percent = (i - 40) / (310 - 40) * 100;
-        gfx->fillArc(x0, y0, 118, 88, i, i + 10, BLACK);
-        // if(percent<20 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, RED);
-        // if(percent<50 && percent>20 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, ORANGE);
-        // if(percent>50 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, GREEN);
-        //gfx->fillArc(x0, y0, 118, 88, 40, 320, 0xf1a2);
-        //gfx->fillArc(x0, y0, 118, 88, i, i + 10, BLACK);
-        gfx->setRotation(0);
-        //gfx->fillRect(x0 - 55, y0 - 15, 110, 25, BLACK);
-        gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-        //gfx->setCursor(x0 - 35, y0 - 15);
-
-        String str = String(percent, 0); //+"%";
-        gfx->setTextSize(3, 3);
-        //if (percent < 10)
-        //{
-        //    draw_center_txt(str, x0 - 10, y0 - 15);
-        //}
-        //else
-        //{
-        //    draw_center_txt(str, x0, y0 - 15);
-        //}
-
-        gfx->setTextSize(1, 1);
-
-        display_fuel_mpg();
-        // gfx->print(percent,0);
-        // gfx->print("%");
-        gfx->setRotation(1);
-    } */
-
-    //draw_center_txt(String(c_mpg), 50, h/2-30+60);
-    //draw_center_txt(String(a_mpg), x0, h - 20);
+    gfx->setRotation(0);    
 }
 void display_fuel_guage()
 {
@@ -268,14 +231,14 @@ void loop()
         if ((rxId & 0x40000000) == 0x40000000)
         { // Determine if message is a remote request frame.
             sprintf(msgString, " REMOTE REQUEST FRAME");
-            //Serial.print(msgString);
+            Serial.print(msgString);
         }
         else
         {
             for (byte i = 0; i < len; i++)
             {
                 sprintf(msgString, " 0x%.2X", rxBuf[i]);
-                //Serial.print(msgString);
+                Serial.print(msgString);
             }
         }
     }
