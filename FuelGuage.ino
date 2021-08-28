@@ -24,11 +24,12 @@ static uint8_t conv2d(const char *p)
 
 static int16_t w, h, center;
 
-static uint8_t c_mpg = 30, a_mpg = 44;
-static uint16_t fuel_max = TANKSIZE * 40;
+static uint8_t c_mpg = 51, a_mpg = 48;
+static uint16_t fuel_max = TANKSIZE * c_mpg;
 
 //TODO: read fuel level from CAN
-static uint16_t fuel_level_start = (fuel_max - (TANKSIZE - 1.65) * 40);
+static uint16_t fuel_used = fuel_max - (TANKSIZE)*c_mpg;
+static uint16_t fuel_left = fuel_max - fuel_used;
 
 static unsigned long lastTime = 0;
 static unsigned long accumulated_time = 0;
@@ -40,7 +41,8 @@ void setup(void)
 {
     gfx->begin();
     gfx->fillScreen(BACKGROUND);
-    fuel_level_start = map(fuel_level_start, 0, fuel_max, 40, 320);
+    fuel_used = fuel_max - (TANKSIZE)*c_mpg;
+    //fuel_used = map(fuel_used, 0, fuel_max, 40, 320);
 
 #ifdef TFT_BL
     pinMode(TFT_BL, OUTPUT);
@@ -49,7 +51,7 @@ void setup(void)
 
     Serial.begin(115200);
 
-    // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
+    // Initialize MCP2515 running at 16MHz with a baudrate of 250kb/s
     if (CAN0.begin(MCP_ANY, CAN_250KBPS, MCP_16MHZ) == CAN_OK)
         Serial.println("MCP2515 Initialized Successfully!");
     else
@@ -78,7 +80,6 @@ void setup(void)
     }
 
     calculate_fuel_level();
-    calculate_fuel_mpg();
     display_fuel_guage();
 
     //gfx->setTextSize(2, 2);
@@ -99,71 +100,39 @@ void setup(void)
     gfx->setRotation(0);
 
     display_fuel_mpg();
-
-    /* for (float i = 310; i >= 40; i -= 5)
-    {
-        float percent = (i - 40) / (310 - 40) * 100;
-        gfx->fillArc(x0, y0, 118, 88, i, i + 10, BLACK);
-        // if(percent<20 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, RED);
-        // if(percent<50 && percent>20 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, ORANGE);
-        // if(percent>50 ) gfx->fillArc(x0, y0, 118, 88, i, i + 10, GREEN);
-        //gfx->fillArc(x0, y0, 118, 88, 40, 320, 0xf1a2);
-        //gfx->fillArc(x0, y0, 118, 88, i, i + 10, BLACK);
-        gfx->setRotation(0);
-        //gfx->fillRect(x0 - 55, y0 - 15, 110, 25, BLACK);
-        gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-        //gfx->setCursor(x0 - 35, y0 - 15);
-
-        String str = String(percent, 0); //+"%";
-        gfx->setTextSize(3, 3);
-        //if (percent < 10)
-        //{
-        //    draw_center_txt(str, x0 - 10, y0 - 15);
-        //}
-        //else
-        //{
-        //    draw_center_txt(str, x0, y0 - 15);
-        //}
-
-        gfx->setTextSize(1, 1);
-
-        display_fuel_mpg();
-        // gfx->print(percent,0);
-        // gfx->print("%");
-        gfx->setRotation(1);
-    } */
 }
 
 void calculate_fuel_level()
 {
 
-    //fuel_level_start = fuel_level_start;
+    //fuel_used = fuel_used;
 }
 
-void calculate_fuel_mpg()
-{
-    c_mpg = 30;
-    a_mpg = 44;
-}
 void display_fuel_mpg()
-{    
+{
     Serial.println("in the display fuel");
 
     gfx->fillRect(x0 - 55, h - 30, 110, 20, BLACK);
-    draw_center_txt(String(map(fuel_level_start, 40, 320, 0, fuel_max)), x0, h - 30);
+    //draw_center_txt(String(map(fuel_used, 40, 320, 0, fuel_max)), x0, h - 30);
+    draw_center_txt(String(fuel_left), x0, h - 30);
 
+    gfx->fillRect(65, 160, 25, 30, BLACK);
     draw_txt(String(c_mpg), 65, 160);
-    draw_txt(String(a_mpg), 155, 160);
+    gfx->fillRect(150, 160, 25, 20, BLACK);
+    draw_txt(String(a_mpg), 150, 160);
 
-    // float percent = (fuel_level_start - 40) / (320 - 40) * 100;
+    // float percent = (fuel_used - 40) / (320 - 40) * 100;
     gfx->setRotation(1);
-    if (fuel_level_start > 40)
+    if (fuel_used > 40)
     {
-        gfx->fillArc(x0, y0, 118, 88, fuel_level_start, 320 + 10, BLACK);
-        Serial.println("FUEL " + String(fuel_level_start));
+        //static uint16_t fuel_used_display = map(fuel_used, 0, fuel_max, 40, 320);
+        gfx->fillArc(x0, y0, 118, 88, map(fuel_used, 0, fuel_max, 40, 320), 320 + 10, BLACK);
+        Serial.println("FUEL MAX " + String(fuel_max));
+        Serial.println("FUEL " + String(fuel_used));
+        Serial.println("FUEL DISPLAY " + String(map(fuel_used, 0, fuel_max, 40, 320)));
     }
 
-    gfx->setRotation(0);    
+    gfx->setRotation(0);
 }
 void display_fuel_guage()
 {
@@ -178,7 +147,7 @@ void display_fuel_guage()
 
     gfx->setRotation(0);
     gfx->fillRect(60, h / 2 - 5, 30, 35, YELLOW);
-    gfx->fillRect(w - 90, h / 2 - 30, 30, 60, YELLOW);
+    gfx->fillRect(w - 95, h / 2 - 30, 30, 60, YELLOW);
 }
 
 void draw_center_txt(const String &buf, int x, int y)
@@ -204,29 +173,50 @@ void draw_txt(const String &buf, int x, int y)
     //Serial.println(x);
 }
 
+unsigned int hexToDec(String hexString)
+{
+    unsigned int decValue = 0;
+    int nextInt;
+
+    for (int i = 0; i < hexString.length(); i++)
+    {
+        nextInt = int(hexString.charAt(i));
+        if (nextInt >= 48 && nextInt <= 57)
+            nextInt = map(nextInt, 48, 57, 0, 9);
+        if (nextInt >= 65 && nextInt <= 70)
+            nextInt = map(nextInt, 65, 70, 10, 15);
+        if (nextInt >= 97 && nextInt <= 102)
+            nextInt = map(nextInt, 97, 102, 10, 15);
+        nextInt = constrain(nextInt, 0, 15);
+        decValue = (decValue * 16) + nextInt;
+    }
+    return decValue;
+}
+
 void array_to_string(byte array[], unsigned int len, char buffer[])
 {
     for (unsigned int i = 0; i < len; i++)
     {
         byte nib1 = (array[i] >> 4) & 0x0F;
         byte nib2 = (array[i] >> 0) & 0x0F;
-        buffer[i*2+0] = nib1  < 0xA ? '0' + nib1  : 'A' + nib1  - 0xA;
-        buffer[i*2+1] = nib2  < 0xA ? '0' + nib2  : 'A' + nib2  - 0xA;
+        buffer[i * 2 + 0] = nib1 < 0xA ? '0' + nib1 : 'A' + nib1 - 0xA;
+        buffer[i * 2 + 1] = nib2 < 0xA ? '0' + nib2 : 'A' + nib2 - 0xA;
     }
-    buffer[len*2] = '\0';
+
+    buffer[len * 2] = '\0';
 }
 
 void loop()
 {
     currentTime = millis();
+    //fuel_max = TANKSIZE * c_mpg;
+    //fuel_used = (fuel_max - (TANKSIZE) * c_mpg);
+    fuel_left = fuel_max - fuel_used;
     //calculate_fuel_mpg();
     display_fuel_mpg();
     if (accumulated_time > 1000)
     {
         accumulated_time = 0;
-        if (fuel_level_start > 40)
-            fuel_level_start -= 1;
-        //Serial.println(((millis() / 1000) + 1) * 1000);
     }
 
     if (!digitalRead(CAN0_INT)) // If CAN0_INT pin is low, read receive buffer
@@ -249,7 +239,7 @@ void loop()
         {
             for (byte i = 0; i < len; i++)
             {
-                sprintf(msgString, " 0x%.2X", rxBuf[i]);                
+                sprintf(msgString, " 0x%.2X", rxBuf[i]);
                 Serial.print(msgString);
                 //String myString = (char*)rxBuf[i];
                 //Serial.print("DECODED: "+myString);
@@ -257,13 +247,11 @@ void loop()
             Serial.println("=======================================");
             char str[32] = "";
             array_to_string(rxBuf, 8, str);
-            Serial.println("DECODED: "+String(str));
             
+            c_mpg = hexToDec(String(str[4])+String(str[5])+String(str[6])+String(str[7])) / 100;
+            a_mpg = hexToDec(String(str[8])+String(str[9])+String(str[10])+String(str[11])) / 100;
+            Serial.print("DECODED: "+String(str[4])+String(str[5])+String(str[6])+String(str[7]));
         }
     }
     accumulated_time += millis() - currentTime;
-
-    //Serial.println();
-    //Serial.println(accumulated_time);
-    //Serial.println();
 }
